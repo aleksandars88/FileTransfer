@@ -6,8 +6,11 @@ namespace FileTransfer.Contracts
 {
     public class FileChunk
     {
-        public int ChunkId { get; set; }
+        public string FileId { get; set; }
+        public int ChunkIndex { get; set; }
+        public int TotalChunks { get; set; }
+        public long FileSize { get; set; }
         public byte[] Data { get; set; }
-        public int Size { get; set; }
+        public string Checksum { get; set; }
     }
 }
