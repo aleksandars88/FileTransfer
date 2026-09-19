@@ -6,6 +6,7 @@
     <Project Path="src/FileTransfer.Producer/FileTransfer.Producer.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/FileTransfer.Infrastructure.Tests/FileTransfer.Infrastructure.Tests.csproj" Id="8747d84e-f3c7-433d-a73f-782653d4694b" />
     <Project Path="tests/FileTransfer.Consumer.Tests/FileTransfer.Consumer.Tests.csproj" Id="b7c77d44-b583-4dbf-a355-38200e21fda1" />
     <Project Path="tests/FileTransfer.Producer.Tests/FileTransfer.Producer.Tests.csproj" Id="a61db785-6278-4ab4-8eaa-05b0d456b28b" />
   </Folder>
