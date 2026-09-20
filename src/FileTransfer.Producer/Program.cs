@@ -1,4 +1,4 @@
-﻿using FileTransfer.Infrastructure;
+﻿using FileTransfer.Infrastructure.Transport;
 using FileTransfer.Producer.Configuration;
 using FileTransfer.Producer.Interfaces;
 using FileTransfer.Producer.Services;

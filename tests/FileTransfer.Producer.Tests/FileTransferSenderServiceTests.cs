@@ -1,5 +1,5 @@
 ﻿using FileTransfer.Contracts;
-using FileTransfer.Infrastructure;
+using FileTransfer.Infrastructure.Transport;
 using FileTransfer.Producer.Interfaces;
 using FileTransfer.Producer.Services;
 using FluentAssertions;

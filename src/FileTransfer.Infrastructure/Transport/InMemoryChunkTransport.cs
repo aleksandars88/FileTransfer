@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Channels;
 
-namespace FileTransfer.Infrastructure
+namespace FileTransfer.Infrastructure.Transport
 {
     public class InMemoryChunkTransport : IChunkTransport
     {

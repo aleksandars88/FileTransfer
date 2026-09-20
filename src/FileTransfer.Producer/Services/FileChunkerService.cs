@@ -20,7 +20,7 @@ namespace FileTransfer.Producer.Services
         public async IAsyncEnumerable<FileChunk> GetFileChunks(string filePath, [System.Runtime.CompilerServices.EnumeratorCancellation]
         CancellationToken cancellationToken = default)
         {
-            var fileId = Guid.NewGuid().ToString();
+            var fileId = Guid.NewGuid();
             var fileInfo = new FileInfo(filePath);
 
             if(_options.Value.ChunkSize <= 0)
