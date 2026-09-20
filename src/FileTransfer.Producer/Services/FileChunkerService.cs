@@ -54,6 +54,7 @@ namespace FileTransfer.Producer.Services
                 yield return new FileChunk()
                 {
                     FileId = fileId,
+                    FileName = fileInfo.Name,
                     ChunkIndex = chunkIndex,
                     TotalChunks = totalChunks,
                     FileSize = fileInfo.Length,

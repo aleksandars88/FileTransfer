@@ -36,7 +36,7 @@ namespace FileTransfer.Consumer.Services
 
                 if (await HasAllChunksAsync(chunk, cancellationToken))
                 {
-                    var outputPath = Path.Combine(_options.Value.OutputDirectory, $"{chunk.FileId}.received");
+                    var outputPath = Path.Combine(_options.Value.OutputDirectory, chunk.FileName);
 
                     await _reassembler.ReassembleAsync(chunk.FileId, chunk.TotalChunks, outputPath, cancellationToken);
                 }

@@ -39,20 +39,13 @@ namespace FileTransfer.Infrastructure.Storage
 
         public async Task StoreAsync(FileChunk chunk, CancellationToken cancellationToken = default)
         {
-            var directory = Path.Combine(
-                   _storageDirectory,
-                   chunk.FileId.ToString());
+            var directory = Path.Combine(_storageDirectory, chunk.FileId.ToString());
 
             Directory.CreateDirectory(directory);
 
-            var path = Path.Combine(
-                directory,
-                $"{chunk.ChunkIndex}.chunk");
+            var path = Path.Combine(directory, $"{chunk.ChunkIndex}.chunk");
 
-            await File.WriteAllBytesAsync(
-                path,
-                chunk.Data,
-                cancellationToken);
+            await File.WriteAllBytesAsync(path, chunk.Data, cancellationToken);
         }
 
         private string GetChunkPath(Guid fileId, int chunkIndex)
