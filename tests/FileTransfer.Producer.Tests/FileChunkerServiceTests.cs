@@ -1,8 +1,6 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
-using FileTransfer.Producer.Services;
+﻿using FileTransfer.Producer.Services;
+using FileTransfer.Producer.Tests.Fakes;
 using FluentAssertions;
-using Xunit;
 
 namespace FileTransfer.Producer.Tests
 {
@@ -11,7 +9,8 @@ namespace FileTransfer.Producer.Tests
         [Fact]
         public async Task Should_GetFileChunks()
         {
-            var fileChunkerService = new FileChunkerService();
+            var fileChunkerService = new FileChunkerService(new FakeTransferConfiguration());
+
             var fileInfo = new FileInfo("Data/sample-10mb.jpg");
             fileInfo.Exists.Should().BeTrue("The test file should exist for the test to run.");
 

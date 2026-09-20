@@ -10,9 +10,47 @@ namespace FileTransfer.Producer.Services
 {
     public class FileTransferSenderService : IFileTransferSenderService
     {
-        public Task<bool> SendFile(string filePath, CancellationToken cancellationToken = default)
+        private IChunkTransport _chunkTransport;
+        private IFileChunkerService _fileChunker;
+
+        public FileTransferSenderService(IChunkTransport chunkTransport, IFileChunkerService fileChunker)
         {
-            throw new NotImplementedException();
+            _chunkTransport = chunkTransport;
+            _fileChunker = fileChunker;
+        }
+
+        public async Task<bool> SendFile(string filePath, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if(string.IsNullOrEmpty(filePath))
+                {
+                    throw new ArgumentException("File path cannot be null or empty.", nameof(filePath));
+                }
+
+                if(!File.Exists(filePath))
+                {
+                    throw new FileNotFoundException("File not found.", filePath);
+                }
+
+                var chunks = _fileChunker.GetFileChunks(filePath, cancellationToken);
+                var hasChunks = false;
+
+                await foreach (var chunk in chunks)
+                {
+                    await _chunkTransport.SendChunk(chunk, cancellationToken);
+                    hasChunks = true;
+                }
+
+
+                return hasChunks == true;
+            }
+            catch (Exception ex)
+            {
+
+                Console.WriteLine($"Error sending file: {ex.Message}");
+                return false;
+            }
+        }
         }
     }
-}
