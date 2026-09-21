@@ -6,7 +6,7 @@ namespace FileTransfer.Producer.Configuration
 {
     public class FileTransferOptions
     {
-        public string SourceDirectory { get; set; } = "Source";
-        public int ChunkSize { get; set; } = 1024*1024;
+        public string SourceDirectory { get; set; }
+        public int ChunkSize { get; set; }
     }
 }

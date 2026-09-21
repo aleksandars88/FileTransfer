@@ -26,6 +26,8 @@ namespace FileTransfer.Consumer.Services
         {
             await foreach (var chunk in _transport.ReceiveChunk(cancellationToken))
             {
+                Console.WriteLine($"[{chunk.FileName}]: Received chunk index: {chunk.ChunkIndex} of total chunks {chunk.TotalChunks}");
+
                 ValidateChecksum(chunk);
                 ValidateChunk(chunk);
 

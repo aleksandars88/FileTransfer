@@ -16,6 +16,9 @@ internal class Program
         var builder = Host.CreateApplicationBuilder(args);
 
         builder.Services.Configure<FileTransferConsumerOptions>(builder.Configuration.GetSection("FileTransfer"));
+        builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection("RabbitMq"));
+        builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<RabbitMqOptions>>().Value);
+        builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<FileTransferConsumerOptions>>().Value);
 
         builder.Services.AddSingleton<IFileChunkStorage>(sp => {
             var options = sp.GetRequiredService<IOptions<FileTransferConsumerOptions>>().Value;
@@ -26,12 +29,7 @@ internal class Program
 
         builder.Services.AddSingleton<IFileTransferReceiver, FileTransferReceiver>();
 
-        builder.Services.Configure<RabbitMqOptions>(builder.Configuration.GetSection("RabbitMq"));
-
-        builder.Services.AddSingleton(sp => sp.GetRequiredService<IOptions<RabbitMqOptions>>().Value);
-
         builder.Services.AddSingleton<IChunkTransport, RabbitMqChunkTransport>();
-
 
         var host = builder.Build();
 

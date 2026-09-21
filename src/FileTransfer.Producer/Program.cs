@@ -25,9 +25,7 @@ internal class Program
         using var host = builder.Build();
 
         var fileTransferSender = host.Services.GetRequiredService<IFileTransferSenderService>();
-        var sourceDirectory = host.Services.GetRequiredService<IOptions<FileTransferOptions>>().Value.SourceDirectory;
-
-        var sourcePath = Path.Combine(Directory.GetCurrentDirectory(), sourceDirectory);
+        var sourcePath = host.Services.GetRequiredService<IOptions<FileTransferOptions>>().Value.SourceDirectory;
 
         if(!Directory.Exists(sourcePath))
         {
@@ -43,14 +41,70 @@ internal class Program
             EnableRaisingEvents = true
         };
 
-        watcher.Created += (sender, e) =>
+        watcher.Created += async (sender, e) =>
         {
-            Console.WriteLine($"New file detected: {e.Name}");  
-            fileTransferSender.SendFile(e.FullPath);
+            Console.WriteLine($"New file detected: {e.Name}");
+
+            try
+            {
+                await WaitForFileReadyAsync(e.FullPath);
+
+                Console.WriteLine($"File is ready: {e.Name}");
+
+                await fileTransferSender.SendFile(e.FullPath);
+
+                Console.WriteLine($"File sent successfully: {e.Name}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending file: {ex.Message}");
+            }
         };
 
-        Console.WriteLine("Watching folder...");
-
         await Task.Delay(Timeout.Infinite);        
+    }
+
+    private static async Task WaitForFileReadyAsync(
+    string filePath,
+    CancellationToken cancellationToken = default)
+    {
+        long previousSize = -1;
+
+        while (!cancellationToken.IsCancellationRequested)
+        {
+            try
+            {
+                var fileInfo = new FileInfo(filePath);
+
+                if (!fileInfo.Exists)
+                {
+                    await Task.Delay(500, cancellationToken);
+                    continue;
+                }
+
+                var currentSize = fileInfo.Length;
+
+                if (currentSize == previousSize)
+                {
+                    using var stream = new FileStream(
+                        filePath,
+                        FileMode.Open,
+                        FileAccess.Read,
+                        FileShare.Read);
+
+                    return;
+                }
+
+                previousSize = currentSize;
+            }
+            catch (IOException)
+            {
+                // File is still being copied/written.
+            }
+
+            await Task.Delay(500, cancellationToken);
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
     }
 }
