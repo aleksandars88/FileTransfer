@@ -8,7 +8,7 @@ The solution is designed to keep the file transfer logic independent from the un
 
 The application consists of two main components:
 
-* **Producer** – reads a source file, splits it into chunks, calculates a checksum for each chunk, and sends the chunks through the configured transport.
+* **Producer** – reads a source file, splits it into chunks, calculates an MD5 checksum for each chunk and a SHA-256 checksum for the complete file, and sends the chunks through the configured transport.
 * **Consumer** – receives the chunks, validates their checksums, stores them temporarily, and reconstructs the original file once all chunks have been received.
 
 The application does not load the entire file into memory. Files are processed incrementally using streams and chunks.
@@ -24,6 +24,8 @@ public class FileChunk
 {
     public Guid FileId { get; set; }
 
+    public string FileName { get; set; }
+
     public int ChunkIndex { get; set; }
 
     public int TotalChunks { get; set; }
@@ -32,18 +34,22 @@ public class FileChunk
 
     public byte[] Data { get; set; }
 
-    public string Checksum { get; set; }
+    public string ChunkChecksum { get; set; }
+
+    public string FileChecksum { get; set; }
 }
 ```
 
 ### Chunk metadata
 
 * `FileId` uniquely identifies the file.
+* `FileName` contains the original file name.
 * `ChunkIndex` identifies the position of the chunk within the file.
 * `TotalChunks` specifies how many chunks belong to the file.
 * `FileSize` contains the original file size.
 * `Data` contains the actual chunk data.
-* `Checksum` contains the SHA-256 checksum calculated for the chunk.
+* `ChunkChecksum` contains the MD5 checksum calculated for the chunk.
+* `FileChecksum` contains the SHA-256 checksum calculated for the complete file.
 
 The consumer does not rely on chunks arriving in order. `FileId` and `ChunkIndex` are used to correctly identify and assemble the chunks.
 
@@ -51,9 +57,13 @@ The consumer does not rely on chunks arriving in order. `FileId` and `ChunkIndex
 
 Checksum validation is performed on the consumer side before a received chunk is stored.
 
-The producer calculates a SHA-256 checksum from the chunk data and when the consumer receives a chunk, it independently calculates the checksum from the received data and compares it with the checksum provided in the message:
+The producer calculates an MD5 checksum from the chunk data and when the consumer receives a chunk, it independently calculates the MD5 checksum from the received data and compares it with the `ChunkChecksum` provided in the message.
 
-This prevents corrupted or modified chunk data from being persisted.
+If the destination checksum does not match the source checksum, the chunk must be re-submitted.
+
+The producer also calculates a SHA-256 checksum for the complete source file. This value is stored in `FileChecksum`.
+
+After the destination file is reconstructed, its SHA-256 checksum is calculated and compared with the `FileChecksum`.
 
 ## Consumer Flow
 
@@ -61,13 +71,14 @@ The consumer follows this sequence:
 
 1. Receive a chunk from the transport.
 2. Validate the chunk metadata.
-3. Calculate the SHA-256 checksum from the received data.
-4. Compare the calculated checksum with the received checksum.
-5. Reject the chunk if the checksum does not match.
-6. Store the chunk if validation succeeds.
+3. Calculate the MD5 checksum from the received data.
+4. Compare the calculated checksum with the `ChunkChecksum`.
+5. Re-submit the chunk if the checksum does not match.
+6. Store the chunk if checksum validation succeeds.
 7. Determine whether all chunks for the file have been received.
 8. Reconstruct the file in the correct chunk order.
-9. Write the resulting file to the destination path.
+9. Calculate the SHA-256 checksum of the reconstructed file.
+10. Compare the destination checksum with the `FileChecksum`.
 
 ## Transport Abstraction
 
@@ -244,7 +255,9 @@ Then configure the producer and consumer to use the RabbitMQ transport.
 ## Example Transfer
 
 Copy file into SourceDirectory configuration defined in the producer appsettings.json:
+
 e.g.
+
 ```text
 C:\FileTransfer\Source\large-file.jpg
 ```
