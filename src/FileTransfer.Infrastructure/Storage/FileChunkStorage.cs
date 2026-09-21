@@ -33,7 +33,7 @@ namespace FileTransfer.Infrastructure.Storage
                 TotalChunks = 0,
                 FileSize = 0,
                 Data = data,
-                Checksum = string.Empty
+                ChunkChecksum = string.Empty
             };
         }
 

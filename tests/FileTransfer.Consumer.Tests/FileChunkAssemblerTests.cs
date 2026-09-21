@@ -59,7 +59,7 @@ namespace FileTransfer.Consumer.Tests
                 TotalChunks = 4,
                 FileSize = data.Length,
                 Data = data,
-                Checksum = "checksum"
+                ChunkChecksum = "checksum"
             };
         }
     }

@@ -40,6 +40,10 @@ namespace FileTransfer.Producer.Services
 
             int chunkIndex = 0;
 
+            var fileChecksum = await ChecksumHelper.ComputeSha256(filePath, cancellationToken);
+
+            Console.WriteLine($"File: {fileInfo.Name}, Size: {fileInfo.Length} bytes, Total Chunks: {totalChunks}, File Checksum: {fileChecksum}");
+
             while ((chunkBytes = await stream.ReadAsync(
                       buffer.AsMemory(0, buffer.Length),
                       cancellationToken)) > 0)
@@ -56,7 +60,8 @@ namespace FileTransfer.Producer.Services
                     TotalChunks = totalChunks,
                     FileSize = fileInfo.Length,
                     Data = data,
-                    Checksum = checksum
+                    ChunkChecksum = checksum,
+                    FileChecksum = fileChecksum
                 };
 
                 chunkIndex++;

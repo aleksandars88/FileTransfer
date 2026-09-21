@@ -4,9 +4,13 @@ namespace FileTransfer.Infrastructure.Helpers
 {
     public static class ChecksumHelper
     {
-        public static string ComputeSha256(byte[] data)
+        public static async Task<string> ComputeSha256(string filePath, CancellationToken cancellationToken = default)
         {
-            var hash = SHA256.HashData(data);
+            await using var stream = File.OpenRead(filePath);
+
+            using var sha256 = SHA256.Create();
+
+            var hash = await sha256.ComputeHashAsync(stream, cancellationToken);
 
             return Convert.ToHexString(hash);
         }

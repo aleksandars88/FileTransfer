@@ -8,7 +8,7 @@ namespace FileTransfer.Infrastructure.Tests
         public async Task Should_StoreAndRetrieveFileChunk()
         {
             var storage = new FileChunkStorage("./test-chunks");
-            var chunk = new Contracts.FileChunk { FileId = Guid.NewGuid(), FileSize = 1024, TotalChunks = 4, ChunkIndex = 0, Checksum = "test-checksum", Data = new byte[] { 1, 2, 3 } };
+            var chunk = new Contracts.FileChunk { FileId = Guid.NewGuid(), FileSize = 1024, TotalChunks = 4, ChunkIndex = 0, ChunkChecksum = "test-checksum", Data = new byte[] { 1, 2, 3 } };
 
             await storage.StoreAsync(chunk);
 
@@ -23,7 +23,7 @@ namespace FileTransfer.Infrastructure.Tests
         public async Task Should_CheckIfFileChunkExists()
         {
             var storage = new FileChunkStorage("./test-chunks");
-            var chunk = new Contracts.FileChunk { FileId = Guid.NewGuid(), FileSize = 1024, TotalChunks = 4, ChunkIndex = 0, Checksum = "test-checksum", Data = new byte[] { 1, 2, 3 } };
+            var chunk = new Contracts.FileChunk { FileId = Guid.NewGuid(), FileSize = 1024, TotalChunks = 4, ChunkIndex = 0, ChunkChecksum = "test-checksum", Data = new byte[] { 1, 2, 3 } };
             await storage.StoreAsync(chunk);
             var exists = await storage.ExistsAsync(chunk.FileId, chunk.ChunkIndex);
             Assert.True(exists);

@@ -12,6 +12,7 @@ namespace FileTransfer.Contracts
         public int TotalChunks { get; set; }
         public long FileSize { get; set; }
         public byte[] Data { get; set; }
-        public string Checksum { get; set; }
+        public string ChunkChecksum { get; set; }
+        public string FileChecksum { get; set; }
     }
 }

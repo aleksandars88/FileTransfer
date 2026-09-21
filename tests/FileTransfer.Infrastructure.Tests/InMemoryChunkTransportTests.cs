@@ -12,7 +12,7 @@ namespace FileTransfer.Infrastructure.Tests
         {
             var transport = new InMemoryChunkTransport();
             var fileId = Guid.NewGuid();
-            await transport.SendChunk(new Contracts.FileChunk { FileId = fileId, FileSize = 1024, TotalChunks = 4, ChunkIndex = 0, Checksum = "test-checksum", Data = new byte[] { 1, 2, 3 } }, CancellationToken.None);
+            await transport.SendChunk(new Contracts.FileChunk { FileId = fileId, FileSize = 1024, TotalChunks = 4, ChunkIndex = 0, ChunkChecksum = "test-checksum", Data = new byte[] { 1, 2, 3 } }, CancellationToken.None);
 
             await using var enumerator = transport.ReceiveChunk(CancellationToken.None).GetAsyncEnumerator(CancellationToken.None);
 
@@ -25,7 +25,7 @@ namespace FileTransfer.Infrastructure.Tests
             Assert.Equal(1024, receivedChunk.FileSize);
             Assert.Equal(4, receivedChunk.TotalChunks);
             Assert.Equal(0, receivedChunk.ChunkIndex);
-            Assert.Equal("test-checksum", receivedChunk.Checksum);
+            Assert.Equal("test-checksum", receivedChunk.ChunkChecksum);
             Assert.Equal(new byte[] { 1, 2, 3 }, receivedChunk.Data);
         }
     }

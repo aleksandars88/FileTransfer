@@ -44,7 +44,7 @@ namespace FileTransfer.Consumer.Tests
                 TotalChunks = 2,
                 FileSize = 10,
                 Data = new byte[] { 1, 2, 3, 4, 5 },
-                Checksum =  ChecksumHelper.ComputeMd5(new byte[] { 1, 2, 3, 4, 5 })
+                ChunkChecksum =  ChecksumHelper.ComputeMd5(new byte[] { 1, 2, 3, 4, 5 })
             };
 
             _transportMock
@@ -68,7 +68,7 @@ namespace FileTransfer.Consumer.Tests
                 TotalChunks = 1,
                 FileSize = 5,
                 Data = "Hello"u8.ToArray(),
-                Checksum = "invalid-checksum"
+                ChunkChecksum = "invalid-checksum"
             };
 
             _transportMock.Setup(x => x.ReceiveChunk(It.IsAny<CancellationToken>())).Returns(ToAsyncEnumerable(chunk));

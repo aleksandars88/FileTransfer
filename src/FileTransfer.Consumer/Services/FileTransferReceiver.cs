@@ -5,6 +5,7 @@ using FileTransfer.Infrastructure.Helpers;
 using FileTransfer.Infrastructure.Storage;
 using FileTransfer.Infrastructure.Transport;
 using Microsoft.Extensions.Options;
+using static System.Net.WebRequestMethods;
 
 namespace FileTransfer.Consumer.Services
 {
@@ -24,7 +25,7 @@ namespace FileTransfer.Consumer.Services
         {
             await foreach (var chunk in _transport.ReceiveChunk(cancellationToken))
             {
-                Console.WriteLine($"[{chunk.FileName}]: Received chunk index: {chunk.ChunkIndex} of total chunks {chunk.TotalChunks}");
+                Console.WriteLine($"[{chunk.FileName}]: Position: {chunk.ChunkIndex*chunk.Data.Length} Checksum: {chunk.ChunkChecksum}");
 
                 ValidateChecksum(chunk);
                 ValidateChunk(chunk);
@@ -41,6 +42,11 @@ namespace FileTransfer.Consumer.Services
                     var outputPath = Path.Combine(destinationPath, chunk.FileName);
 
                     await _reassembler.ReassembleAsync(chunk.FileId, chunk.TotalChunks, outputPath, cancellationToken);
+
+                    var actualChecksum = await ChecksumHelper.ComputeSha256(outputPath, cancellationToken);
+                    var result = chunk.FileChecksum == actualChecksum ? "passed" : "failed";
+
+                    Console.WriteLine($"File checksum check {result}: \nExpected:{chunk.FileChecksum} \nActual: {actualChecksum}");
                 }
             }
         }
@@ -85,7 +91,7 @@ namespace FileTransfer.Consumer.Services
 
             if (!string.Equals(
                     calculatedChecksum,
-                    chunk.Checksum,
+                    chunk.ChunkChecksum,
                     StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException($"Checksum validation failed for file {chunk.FileName} with FileId {chunk.FileId}, chunk {chunk.ChunkIndex}.");
