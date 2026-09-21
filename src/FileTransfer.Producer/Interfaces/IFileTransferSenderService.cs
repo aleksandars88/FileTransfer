@@ -6,6 +6,6 @@ namespace FileTransfer.Producer.Interfaces
 {
     public interface IFileTransferSenderService
     {
-        Task<bool>   SendFile(string filePath, CancellationToken cancellationToken = default);
+        Task<bool> SendFile(string filePath, CancellationToken cancellationToken = default);
     }
 }

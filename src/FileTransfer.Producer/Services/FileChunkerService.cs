@@ -2,10 +2,6 @@
 using FileTransfer.Producer.Configuration;
 using FileTransfer.Producer.Interfaces;
 using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using static System.Net.WebRequestMethods;
 
 namespace FileTransfer.Producer.Services
 {

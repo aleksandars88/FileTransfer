@@ -1,15 +1,12 @@
 ﻿using FileTransfer.Consumer.Configuration;
 using FileTransfer.Consumer.Services;
-using FileTransfer.Contracts;
 using FileTransfer.Infrastructure.Storage;
 using FileTransfer.Infrastructure.Transport;
-using FileTransfer.Consumer;
-using FileTransfer.Producer;
+using FileTransfer.Producer.Configuration;
+using FileTransfer.Producer.Services;
+using FluentAssertions;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
-using FileTransfer.Producer.Services;
-using FileTransfer.Producer.Configuration;
-using FluentAssertions;
 
 namespace FileTransfer.Integration.Tests;
 
@@ -22,13 +19,9 @@ public class FileTransferIntegrationTests
     {
         var projectDirectory = Directory.GetCurrentDirectory();
 
-        _sourceDirectory = Path.Combine(
-            projectDirectory,
-            "Source");
+        _sourceDirectory = Path.Combine(projectDirectory, "Source");
 
-        _destinationDirectory = Path.Combine(
-            projectDirectory,
-            "Destination");
+        _destinationDirectory = Path.Combine(projectDirectory, "Destination");
 
         Directory.CreateDirectory(_sourceDirectory);
         Directory.CreateDirectory(_destinationDirectory);
@@ -55,8 +48,7 @@ public class FileTransferIntegrationTests
 
         var transport = new InMemoryChunkTransport();
 
-        var storage = new FileChunkStorage(
-            _destinationDirectory);
+        var storage = new FileChunkStorage(_destinationDirectory);
 
         var assembler = new FileChunkAssembler(storage);
 
@@ -114,8 +106,7 @@ public class FileTransferIntegrationTests
         sourceHash.Should().Be(destinationHash);
     }
 
-    private static async Task<string> CalculateSha256Async(
-        string filePath)
+    private static async Task<string> CalculateSha256Async(string filePath)
     {
         await using var stream = File.OpenRead(filePath);
 
