@@ -46,7 +46,7 @@ namespace FileTransfer.Producer.Services
             {
                 var data = buffer[..chunkBytes];
 
-                var checksum = ChecksumHelper.ComputeSha256(data);
+                var checksum = ChecksumHelper.ComputeMd5(data);
 
                 yield return new FileChunk()
                 {

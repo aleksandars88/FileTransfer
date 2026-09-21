@@ -52,12 +52,6 @@ public class FileTransferIntegrationTests
 
         var assembler = new FileChunkAssembler(storage);
 
-        var consumerOptions = Options.Create(
-            new FileTransferConsumerOptions
-            {
-                OutputDirectory = _destinationDirectory
-            });
-
         var producerOptions = Options.Create(new FileTransferOptions{
            ChunkSize = 1024 * 1024 
         });
@@ -66,13 +60,13 @@ public class FileTransferIntegrationTests
 
         var sender = new FileTransferSenderService(transport, fileChunker);
 
-        var receiver = new FileTransferReceiver(transport, storage, assembler, consumerOptions);
+        var receiver = new FileTransferReceiver(transport, storage, assembler);
 
         using var cancellationTokenSource = new CancellationTokenSource();
 
         // Act
 
-        var receiverTask = receiver.ReceiveFileChunks(cancellationTokenSource.Token);
+        var receiverTask = receiver.ReceiveFileChunks(_destinationDirectory, cancellationTokenSource.Token);
 
         await sender.SendFile(sourceFilePath, cancellationTokenSource.Token);
 

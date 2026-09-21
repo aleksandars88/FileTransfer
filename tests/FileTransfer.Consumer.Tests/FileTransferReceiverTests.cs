@@ -18,27 +18,17 @@ namespace FileTransfer.Consumer.Tests
         private readonly Mock<IChunkTransport> _transportMock;
         private readonly Mock<IFileChunkStorage> _storageMock;
         private readonly Mock<IFileChunkAssembler> _reassemblerMock;
-        private readonly Mock<IOptions<FileTransferConsumerOptions>> _optionsMock;
         private readonly FileTransferReceiver _receiver;
         public FileTransferReceiverTests()
         {
             _transportMock = new Mock<IChunkTransport>();
             _storageMock = new Mock<IFileChunkStorage>();
             _reassemblerMock = new Mock<IFileChunkAssembler>();
-            _optionsMock = new Mock<IOptions<FileTransferConsumerOptions>>();
-
-            _optionsMock
-                .Setup(x => x.Value)
-                .Returns(new FileTransferConsumerOptions
-                {
-                    OutputDirectory = "output"
-                });
 
             _receiver = new FileTransferReceiver(
                 _transportMock.Object,
                 _storageMock.Object,
-                _reassemblerMock.Object,
-                _optionsMock.Object);
+                _reassemblerMock.Object);
         }
 
         [Fact]
@@ -54,7 +44,7 @@ namespace FileTransfer.Consumer.Tests
                 TotalChunks = 2,
                 FileSize = 10,
                 Data = new byte[] { 1, 2, 3, 4, 5 },
-                Checksum =  ChecksumHelper.ComputeSha256(new byte[] { 1, 2, 3, 4, 5 })
+                Checksum =  ChecksumHelper.ComputeMd5(new byte[] { 1, 2, 3, 4, 5 })
             };
 
             _transportMock
@@ -62,7 +52,7 @@ namespace FileTransfer.Consumer.Tests
                 .Returns(ToAsyncEnumerable(chunk));
 
             // Act
-            await _receiver.ReceiveFileChunks();
+            await _receiver.ReceiveFileChunks("output");
 
             // Assert
             _storageMock.Verify(x => x.StoreAsync(chunk,It.IsAny<CancellationToken>()),Times.Once);
@@ -86,10 +76,9 @@ namespace FileTransfer.Consumer.Tests
             var receiver = new FileTransferReceiver(
                 _transportMock.Object,
                 _storageMock.Object,
-                _reassemblerMock.Object,
-                _optionsMock.Object);
+                _reassemblerMock.Object);
 
-            Func<Task> act = () => receiver.ReceiveFileChunks();
+            Func<Task> act = () => receiver.ReceiveFileChunks("output");
             await act.Should().ThrowAsync<InvalidDataException>();   
 
         }

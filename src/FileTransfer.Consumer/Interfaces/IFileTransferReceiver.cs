@@ -6,6 +6,6 @@ namespace FileTransfer.Consumer.Interfaces
 {
     public interface IFileTransferReceiver
     {
-        Task ReceiveFileChunks(CancellationToken cancellationToken = default);
+        Task ReceiveFileChunks(string destinationPath, CancellationToken cancellationToken = default);
     }
 }

@@ -13,16 +13,14 @@ namespace FileTransfer.Consumer.Services
         private readonly IChunkTransport _transport;
         private readonly IFileChunkStorage _storage;
         private readonly IFileChunkAssembler _reassembler;
-        private readonly IOptions<FileTransferConsumerOptions> _options;
 
-        public FileTransferReceiver(IChunkTransport transport, IFileChunkStorage storage, IFileChunkAssembler reassembler, IOptions<FileTransferConsumerOptions> options)
+        public FileTransferReceiver(IChunkTransport transport, IFileChunkStorage storage, IFileChunkAssembler reassembler)
         {
             _transport = transport;
             _storage = storage;
             _reassembler = reassembler;
-            _options = options;
         }
-        public async Task ReceiveFileChunks(CancellationToken cancellationToken = default)
+        public async Task ReceiveFileChunks(string destinationPath, CancellationToken cancellationToken = default)
         {
             await foreach (var chunk in _transport.ReceiveChunk(cancellationToken))
             {
@@ -40,7 +38,7 @@ namespace FileTransfer.Consumer.Services
 
                 if (await HasAllChunksAsync(chunk, cancellationToken))
                 {
-                    var outputPath = Path.Combine(_options.Value.OutputDirectory, chunk.FileName);
+                    var outputPath = Path.Combine(destinationPath, chunk.FileName);
 
                     await _reassembler.ReassembleAsync(chunk.FileId, chunk.TotalChunks, outputPath, cancellationToken);
                 }
@@ -83,7 +81,7 @@ namespace FileTransfer.Consumer.Services
 
         private static void ValidateChecksum(FileChunk chunk)
         {
-            var calculatedChecksum = ChecksumHelper.ComputeSha256(chunk.Data);
+            var calculatedChecksum = ChecksumHelper.ComputeMd5(chunk.Data);
 
             if (!string.Equals(
                     calculatedChecksum,

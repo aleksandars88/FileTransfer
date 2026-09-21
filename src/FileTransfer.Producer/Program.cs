@@ -27,7 +27,15 @@ internal class Program
         var fileTransferSender = host.Services.GetRequiredService<IFileTransferSenderService>();
         var sourcePath = host.Services.GetRequiredService<IOptions<FileTransferOptions>>().Value.SourceDirectory;
 
-        if(!Directory.Exists(sourcePath))
+        Console.WriteLine($"Enter source directory absolute path [Default: {sourcePath}]:");
+        var path = Console.ReadLine();
+
+        if (!string.IsNullOrEmpty(path))
+        {
+            sourcePath = path;
+        }
+
+        if (!Directory.Exists(sourcePath))
         {
             Directory.CreateDirectory(sourcePath);
         }

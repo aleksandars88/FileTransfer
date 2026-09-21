@@ -35,8 +35,18 @@ internal class Program
 
         var receiver = host.Services.GetRequiredService<IFileTransferReceiver>();
 
-        Console.WriteLine("Waiting files to be received...");    
-        await receiver.ReceiveFileChunks();
+        var destinationPath = host.Services.GetRequiredService<IOptions<FileTransferConsumerOptions>>().Value.OutputDirectory;
+
+        Console.WriteLine($"Enter destination directory absolute path [Default: {destinationPath}]:");
+        var path = Console.ReadLine();
+
+        if (!string.IsNullOrEmpty(path))
+        {
+            destinationPath = path;
+        }
+
+        Console.WriteLine($"Waiting files to be received on the following location {destinationPath}");    
+        await receiver.ReceiveFileChunks(destinationPath);
 
     }
 }
