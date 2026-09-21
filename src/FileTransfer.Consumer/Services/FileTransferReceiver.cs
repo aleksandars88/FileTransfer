@@ -1,6 +1,7 @@
 ﻿using FileTransfer.Consumer.Configuration;
 using FileTransfer.Consumer.Interfaces;
 using FileTransfer.Contracts;
+using FileTransfer.Infrastructure.Helpers;
 using FileTransfer.Infrastructure.Storage;
 using FileTransfer.Infrastructure.Transport;
 using Microsoft.Extensions.Options;
@@ -25,6 +26,7 @@ namespace FileTransfer.Consumer.Services
         {
             await foreach (var chunk in _transport.ReceiveChunk(cancellationToken))
             {
+                ValidateChecksum(chunk);
                 ValidateChunk(chunk);
 
                 if (await _storage.ExistsAsync(chunk.FileId, chunk.ChunkIndex, cancellationToken))
@@ -74,6 +76,19 @@ namespace FileTransfer.Consumer.Services
             {
                 throw new InvalidOperationException(
                     "Chunk index is outside the expected range.");
+            }
+        }
+
+        private static void ValidateChecksum(FileChunk chunk)
+        {
+            var calculatedChecksum = ChecksumHelper.ComputeSha256(chunk.Data);
+
+            if (!string.Equals(
+                    calculatedChecksum,
+                    chunk.Checksum,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException($"Checksum validation failed for file {chunk.FileName} with FileId {chunk.FileId}, chunk {chunk.ChunkIndex}.");
             }
         }
     }

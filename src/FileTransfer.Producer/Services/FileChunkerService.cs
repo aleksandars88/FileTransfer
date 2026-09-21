@@ -1,4 +1,5 @@
 ﻿using FileTransfer.Contracts;
+using FileTransfer.Infrastructure.Helpers;
 using FileTransfer.Producer.Configuration;
 using FileTransfer.Producer.Interfaces;
 using Microsoft.Extensions.Options;
@@ -45,7 +46,7 @@ namespace FileTransfer.Producer.Services
             {
                 var data = buffer[..chunkBytes];
 
-                var checksum = ComputeChecksum(data);
+                var checksum = ChecksumHelper.ComputeSha256(data);
 
                 yield return new FileChunk()
                 {
@@ -60,14 +61,6 @@ namespace FileTransfer.Producer.Services
 
                 chunkIndex++;
             }
-        }
-
-        private static string ComputeChecksum(byte[] data)
-        {
-            using var sha256 = System.Security.Cryptography.SHA256.Create();
-
-            return Convert.ToHexString(
-                sha256.ComputeHash(data));
         }
     }
 }
