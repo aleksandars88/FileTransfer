@@ -25,6 +25,11 @@ internal class Program
             return new FileChunkStorage(options.OutputDirectory);
         });
 
+        builder.Services.AddSingleton<IFailedChunkStorage>(sp => {
+            var options = sp.GetRequiredService<IOptions<FileTransferConsumerOptions>>().Value;
+            return new FailedChunkStorage(options.FailedChunksDirectory );
+        });
+
         builder.Services.AddSingleton<IFileChunkAssembler, FileChunkAssembler>();
 
         builder.Services.AddSingleton<IFileTransferReceiver, FileTransferReceiver>();

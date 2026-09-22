@@ -1,4 +1,5 @@
 ﻿using FileTransfer.Infrastructure;
+using FileTransfer.Infrastructure.Storage;
 using FileTransfer.Infrastructure.Transport;
 using FileTransfer.Producer.Configuration;
 using FileTransfer.Producer.Interfaces;
@@ -22,9 +23,18 @@ internal class Program
         builder.Services.AddSingleton<IChunkTransport, RabbitMqChunkTransport>();
         builder.Services.AddSingleton<IFileChunkerService, FileChunkerService>();
         builder.Services.AddSingleton<IFileTransferSenderService, FileTransferSenderService>();
+        builder.Services.AddSingleton<IFailedChunkStorage>(sp => {
+            var options = sp.GetRequiredService<IOptions<FileTransferOptions>>().Value;
+            return new FailedChunkStorage(options.FailedChunksDirectory);
+        });
+
         using var host = builder.Build();
 
         var fileTransferSender = host.Services.GetRequiredService<IFileTransferSenderService>();
+
+        var failedChunkStorage = host.Services.GetRequiredService<IFailedChunkStorage>();
+
+
         var sourcePath = host.Services.GetRequiredService<IOptions<FileTransferOptions>>().Value.SourceDirectory;
 
         Console.WriteLine($"Enter source directory absolute path [Default: {sourcePath}]:");
@@ -68,6 +78,28 @@ internal class Program
                 Console.WriteLine($"Error sending file: {ex.Message}");
             }
         };
+
+        _ = Task.Run(async () =>
+        {
+            while (true)
+            {
+                var failedChunks = failedChunkStorage.GetFailedChunks();
+
+                foreach (var failedChunk in failedChunks)
+                {
+                    var filePath = Path.Combine(sourcePath, failedChunk.FileName);
+
+                    await fileTransferSender.ResendChunk(filePath, failedChunk);
+
+                    Console.WriteLine($"[{failedChunk.FileName}]: Resending failed chunk: {failedChunk.ChunkIndex}");
+
+                    failedChunkStorage.Delete(failedChunk);
+                }
+
+                await Task.Delay(1000);
+            }
+
+        });
 
         await Task.Delay(Timeout.Infinite);        
     }

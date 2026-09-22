@@ -1,9 +1,8 @@
-﻿using FileTransfer.Consumer.Configuration;
-using FileTransfer.Consumer.Services;
-using FileTransfer.Infrastructure.Storage;
+﻿using FileTransfer.Infrastructure.Storage;
 using FileTransfer.Infrastructure.Transport;
 using FileTransfer.Producer.Configuration;
 using FileTransfer.Producer.Services;
+using FileTransfer.Consumer.Services;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
@@ -14,17 +13,18 @@ public class FileTransferIntegrationTests
 {
     private readonly string _sourceDirectory;
     private readonly string _destinationDirectory;
+    private readonly string _failedChunksDirectory;
 
     public FileTransferIntegrationTests()
     {
         var projectDirectory = Directory.GetCurrentDirectory();
 
-        _sourceDirectory = Path.Combine(projectDirectory, "Source");
+        _sourceDirectory = Path.Combine(projectDirectory,"Source");
 
-        _destinationDirectory = Path.Combine(projectDirectory, "Destination");
+        _destinationDirectory = Path.Combine(projectDirectory,"Destination");
 
-        Directory.CreateDirectory(_sourceDirectory);
-        Directory.CreateDirectory(_destinationDirectory);
+        _failedChunksDirectory = Path.Combine(projectDirectory,"FailedChunks");
+
     }
 
     [Fact]
@@ -32,9 +32,15 @@ public class FileTransferIntegrationTests
     {
         // Arrange
 
-        var sourceFilePath = Path.Combine(_sourceDirectory, "sample-10mb.jpg");
+        Directory.Delete(_destinationDirectory, true);
+        Directory.Delete(_failedChunksDirectory, true);
 
-        var destinationFilePath = Path.Combine(_destinationDirectory,"sample-10mb.jpg");
+        Directory.CreateDirectory(_destinationDirectory);
+        Directory.CreateDirectory(_failedChunksDirectory);
+
+        var sourceFilePath = Path.Combine(_sourceDirectory,"sample-10mb.jpg");
+
+        var destinationFilePath = Path.Combine(_destinationDirectory, "sample-10mb.jpg");
 
         if (!File.Exists(sourceFilePath))
         {
@@ -52,15 +58,19 @@ public class FileTransferIntegrationTests
 
         var assembler = new FileChunkAssembler(storage);
 
-        var producerOptions = Options.Create(new FileTransferOptions{
-           ChunkSize = 1024 * 1024 
-        });
+        var producerOptions = Options.Create(
+            new FileTransferOptions
+            {
+                ChunkSize = 1024 * 1024
+            });
 
         var fileChunker = new FileChunkerService(producerOptions);
 
+        var failedStorage = new FailedChunkStorage(_failedChunksDirectory);
+
         var sender = new FileTransferSenderService(transport, fileChunker);
 
-        var receiver = new FileTransferReceiver(transport, storage, assembler);
+        var receiver = new FileTransferReceiver(transport, storage, assembler, failedStorage);
 
         using var cancellationTokenSource = new CancellationTokenSource();
 
@@ -71,7 +81,18 @@ public class FileTransferIntegrationTests
         await sender.SendFile(sourceFilePath, cancellationTokenSource.Token);
 
         // Give receiver time to finish processing
-        await Task.Delay(500);
+        await Task.Delay(1000);
+
+        var failedChunks = failedStorage.GetFailedChunks().ToList();
+
+        foreach (var failedChunk in failedChunks)
+        {
+            await sender.ResendChunk(sourceFilePath, failedChunk, cancellationTokenSource.Token);
+
+            await Task.Delay(1000);
+
+            failedStorage.Delete(failedChunk);
+        }
 
         cancellationTokenSource.Cancel();
 
@@ -85,22 +106,24 @@ public class FileTransferIntegrationTests
         }
 
         // Assert
-        var fileExist = File.Exists(destinationFilePath);
-        fileExist.Should().BeTrue(); 
+
+        File.Exists(destinationFilePath).Should().BeTrue();
 
         var sourceInfo = new FileInfo(sourceFilePath);
+
         var destinationInfo = new FileInfo(destinationFilePath);
 
-        sourceInfo.Length.Should().Be(destinationInfo.Length);
+        destinationInfo.Length.Should().Be(sourceInfo.Length);
 
         var sourceHash = await CalculateSha256Async(sourceFilePath);
 
         var destinationHash = await CalculateSha256Async(destinationFilePath);
 
-        sourceHash.Should().Be(destinationHash);
+        destinationHash.Should().Be(sourceHash);
     }
 
-    private static async Task<string> CalculateSha256Async(string filePath)
+    private static async Task<string> CalculateSha256Async(
+        string filePath)
     {
         await using var stream = File.OpenRead(filePath);
 

@@ -14,13 +14,21 @@ namespace FileTransfer.Producer.Services
         {
             _options = options;
         }
-        public async IAsyncEnumerable<FileChunk> GetFileChunks(string filePath, [System.Runtime.CompilerServices.EnumeratorCancellation]
-        CancellationToken cancellationToken = default)
+        public async IAsyncEnumerable<FileChunk> GetFileChunks(string filePath, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             var fileId = Guid.NewGuid();
+
+            await foreach (var chunk in GetFileChunks(filePath, fileId, cancellationToken))
+            {
+                yield return chunk;
+            }
+        }
+
+        public async IAsyncEnumerable<FileChunk> GetFileChunks(string filePath, Guid fileId, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
             var fileInfo = new FileInfo(filePath);
 
-            if(_options.Value.ChunkSize <= 0)
+            if (_options.Value.ChunkSize <= 0)
             {
                 throw new ArgumentException("Chunk size must be greater than zero");
             }
@@ -28,31 +36,31 @@ namespace FileTransfer.Producer.Services
             var chunkSize = _options.Value.ChunkSize;
             var totalChunks = (int)Math.Ceiling((double)fileInfo.Length / chunkSize);
 
-            await using var stream = new FileStream(filePath,
-                                                     FileMode.Open,
-                                                     FileAccess.Read,
-                                                     FileShare.Read,
-                                                     bufferSize: _options.Value.ChunkSize,
-                                                     useAsync: true);
+            await using var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: _options.Value.ChunkSize, useAsync: true);
+
             var buffer = new byte[chunkSize];
 
             int chunkBytes;
-
             int chunkIndex = 0;
 
-            var fileChecksum = await ChecksumHelper.ComputeSha256(filePath, cancellationToken);
+            var fileChecksum =
+                await ChecksumHelper.ComputeSha256(
+                    filePath,
+                    cancellationToken);
 
-            Console.WriteLine($"File: {fileInfo.Name}, Size: {fileInfo.Length} bytes, Total Chunks: {totalChunks}, File Checksum: {fileChecksum}");
+            Console.WriteLine(
+                $"File: {fileInfo.Name}, " +
+                $"Size: {fileInfo.Length} bytes, " +
+                $"Total Chunks: {totalChunks}, " +
+                $"File Checksum: {fileChecksum}");
 
-            while ((chunkBytes = await stream.ReadAsync(
-                      buffer.AsMemory(0, buffer.Length),
-                      cancellationToken)) > 0)
+            while ((chunkBytes = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)) > 0)
             {
                 var data = buffer[..chunkBytes];
 
                 var checksum = ChecksumHelper.ComputeMd5(data);
 
-                yield return new FileChunk()
+                yield return new FileChunk
                 {
                     FileId = fileId,
                     FileName = fileInfo.Name,

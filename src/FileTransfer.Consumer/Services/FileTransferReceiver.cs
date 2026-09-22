@@ -14,12 +14,14 @@ namespace FileTransfer.Consumer.Services
         private readonly IChunkTransport _transport;
         private readonly IFileChunkStorage _storage;
         private readonly IFileChunkAssembler _reassembler;
+        private readonly IFailedChunkStorage _failedChunkStorage;
 
-        public FileTransferReceiver(IChunkTransport transport, IFileChunkStorage storage, IFileChunkAssembler reassembler)
+        public FileTransferReceiver(IChunkTransport transport, IFileChunkStorage storage, IFileChunkAssembler reassembler, IFailedChunkStorage failedChunkStorage)
         {
             _transport = transport;
             _storage = storage;
             _reassembler = reassembler;
+            _failedChunkStorage = failedChunkStorage;
         }
         public async Task ReceiveFileChunks(string destinationPath, CancellationToken cancellationToken = default)
         {
@@ -27,10 +29,31 @@ namespace FileTransfer.Consumer.Services
             {
                 Console.WriteLine($"[{chunk.FileName}]: Position: {chunk.ChunkIndex*chunk.Data.Length} Checksum: {chunk.ChunkChecksum}");
 
-                ValidateChecksum(chunk);
-                ValidateChunk(chunk);
+                try
+                {
+                    ValidateChecksum(chunk);
+                    ValidateChunk(chunk);
+                }
+                catch (InvalidDataException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    Console.WriteLine($"Failed chunk received: FileId: {chunk.FileId}, FileName: {chunk.FileName}, ChunkIndex: {chunk.ChunkIndex}");
+                    await _failedChunkStorage.StoreAsync(
+                        new FailedChunk
+                        {
+                            FileId = chunk.FileId,
+                            FileName = chunk.FileName,
+                            ChunkIndex = chunk.ChunkIndex
+                        },
+                        cancellationToken);
 
-                if (await _storage.ExistsAsync(chunk.FileId, chunk.ChunkIndex, cancellationToken))
+                    continue;
+                }
+
+                if (await _storage.ExistsAsync(
+                        chunk.FileId,
+                        chunk.ChunkIndex,
+                        cancellationToken))
                 {
                     continue;
                 }

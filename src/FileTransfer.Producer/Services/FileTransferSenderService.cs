@@ -1,4 +1,6 @@
-﻿using FileTransfer.Infrastructure.Transport;
+﻿using FileTransfer.Contracts;
+using FileTransfer.Infrastructure.Transport;
+using FileTransfer.Producer.Configuration;
 using FileTransfer.Producer.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -12,6 +14,8 @@ namespace FileTransfer.Producer.Services
     {
         private IChunkTransport _chunkTransport;
         private IFileChunkerService _fileChunker;
+
+        private bool _corrupted;
 
         public FileTransferSenderService(IChunkTransport chunkTransport, IFileChunkerService fileChunker)
         {
@@ -38,7 +42,34 @@ namespace FileTransfer.Producer.Services
 
                 await foreach (var chunk in chunks)
                 {
-                    await _chunkTransport.SendChunk(chunk, cancellationToken);
+                    var chunkToSend = chunk;
+
+                    // Simulation: Corrupt the 3rd chunk to test error handling and retry logic
+                    if (chunk.ChunkIndex == 3 && !_corrupted)
+                    {
+                        _corrupted = true;
+
+                        var corruptedData =
+                            (byte[])chunk.Data.Clone();
+
+                        corruptedData[0] ^= 0xFF;
+
+                        chunkToSend = new FileChunk
+                        {
+                            FileId = chunk.FileId,
+                            FileName = chunk.FileName,
+                            ChunkIndex = chunk.ChunkIndex,
+                            TotalChunks = chunk.TotalChunks,
+                            FileSize = chunk.FileSize,
+                            Data = corruptedData,
+                            ChunkChecksum = chunk.ChunkChecksum,
+                            FileChecksum = chunk.FileChecksum
+                        };
+
+                        Console.WriteLine(
+                            $"SIMULATION: Corrupting chunk {chunk.ChunkIndex}");
+                    }
+                    await _chunkTransport.SendChunk(chunkToSend, cancellationToken);
                     hasChunks = true;
                 }
 
@@ -52,5 +83,30 @@ namespace FileTransfer.Producer.Services
                 return false;
             }
         }
+
+        public async Task ResendChunk(string filePath,
+            FailedChunk failedChunk,
+            CancellationToken cancellationToken = default)
+        {
+            await foreach (var chunk in _fileChunker.GetFileChunks(
+                filePath,
+                failedChunk.FileId,
+                cancellationToken))
+            {
+                if (chunk.ChunkIndex != failedChunk.ChunkIndex)
+                {
+                    continue;
+                }
+
+                await _chunkTransport.SendChunk(
+                    chunk,
+                    cancellationToken);
+
+                Console.WriteLine(
+                    $"Resent chunk {chunk.ChunkIndex} of {chunk.FileName}");
+
+                break;
+            }
         }
     }
+}
