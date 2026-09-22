@@ -163,6 +163,28 @@ They are then written sequentially to the destination file.
 
 The consumer therefore does not depend on the order in which chunks are received from the transport.
 
+## Retry Mechanism
+
+Each chunk is validated by the Consumer using its checksum.
+
+If a chunk is corrupted:
+
+1. The Consumer detects the invalid checksum.
+2. A `FailedChunk` record is stored as JSON in the `FailedChunks` directory.
+3. The Producer detects the failed chunk and recreates it from the original source file.
+4. The chunk is sent again.
+5. After successful processing, the failed chunk record is removed.
+
+`FailedChunk` contains:
+
+* `FileId`
+* `FileName`
+* `ChunkIndex`
+
+Only metadata is stored. The actual file data is not duplicated.
+
+The integration test also verifies this flow by intentionally corrupting one chunk and verifying that the final destination file matches the original file.
+
 ## Configuration
 
 Application settings are separated into file-transfer and transport configuration.
